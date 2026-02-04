@@ -236,6 +236,7 @@ void ConnectFour::stopGame(){
 //
 // random AI function
 //
+
 void ConnectFour::updateAI(){
     static bool waiting = false;
     static std::chrono::steady_clock::time_point waitTime;
@@ -259,3 +260,4 @@ void ConnectFour::updateAI(){
         waiting = false;
         return;
     }
+

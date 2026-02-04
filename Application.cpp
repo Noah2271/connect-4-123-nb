@@ -42,6 +42,7 @@ namespace ClassGame {
                         game->setUpBoard();
                         gameOver = false;
                         gameWinner = -1;
+                        if(game->_gameOptions.P1AI) game->_gameOptions.currentTurnNo += 1;
                     }
                 }
                 if (!game) {
@@ -67,6 +68,7 @@ namespace ClassGame {
                         game->_gameOptions.AIPlaying = true;
                         game->setUpBoard();
                         game->_gameOptions.currentTurnNo += 1;
+                        game->_gameOptions.P1AI = true;
                     }
                     if(ImGui::Button("Start Connect-Four [P2 AI]")) {
                         game = new ConnectFour();
@@ -78,7 +80,8 @@ namespace ClassGame {
 
 
                 } else {
-                    ImGui::Text("Current Player Number: %d", game->getCurrentPlayer()->playerNumber()+1);
+                    if(game->_gameOptions.P1AI) ImGui::Text("Current Player Number: %d", game->getCurrentPlayer()->playerNumber() == 0 ? 2 : 1);
+                    if(!game->_gameOptions.P1AI) ImGui::Text("Current Player Number: %d", game->getCurrentPlayer()->playerNumber()+1);
                     ImGui::Text("Current Board State: %s", game->stateString().c_str());
                 }
                 ImGui::End();
