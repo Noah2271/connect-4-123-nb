@@ -1,11 +1,16 @@
-Using the provided code that can be downloaded from this github add a new class that inherits from game.cpp in the same way TicTacToe.cpp does and implement a working version of the game Connect 4. The game should be added as a fourth choice from the menu so the choices are Tic Tac Toe, Checkers, Othello and now Connect 4.
+Noah Billedo CMPM 123 - Windows PC
 
-The game must be playable by both by 2 people and vs. an AI. Your implementation must check for the winning condition, and display that on the right hand side the same way the current setup does for tic-tac-toe. The stopGame() method is expected to clean up and delete any memory allocated.
+## Connect Four Implementation
+#### ConnectFour.h
+- Holds the class for ConnectFour, which inherits/overrides most of the base game class functions with the addition of the following helper functions. Their names document themself.
+    int getLowestEmptyRow(int);
+    bool isColumnFull(int);
+    void makeTurn(ChessSquare* topSquare, ChessSquare* targetSquare, int col, int targetRow, Bit* bit);
 
-Look at the new Grid.cpp class and see how it is used in Checkers.cpp for a good understanding about laying out a useable grid.
 
-For extra credit, when a game piece is added to the board, make it animate into place instead of just appearing in it's final spot.
+#### ConnectFour.cpp
+- Contains the implementation of the functions defined in ConnectFour.h. Currently includes implementation of a random AI that generates a random non-full column number before dropping a piece down using the makeTurn() function. Save state yet to be implemented.
 
-Graphic files are provided for the game pieces called yellow.png and red.png.
-
-For the submission, create a new github based on the above code-base and provide a link to that along with a complete readme.md on how your implementation works.
+#### Application.cpp
+- Created a button to open the connect four game, as well as two additional buttons to choose whether the AI is playing as P1 or P2. P1 is implemented in by incrementing the turn number in _gameOptions by one, since it pushes up the AI to move first. ConnectFour.cpp also determines red or yellow pieces
+using a flip-flopping boolean value rather than player number so the red piece is always player one.

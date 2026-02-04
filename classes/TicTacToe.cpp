@@ -1,5 +1,7 @@
 #include "TicTacToe.h"
-
+#include <vector>
+#include <list>
+using namespace std;
 
 TicTacToe::TicTacToe()
 {
@@ -159,26 +161,95 @@ void TicTacToe::setStateString(const std::string &s)
 
 
 //
-// this is the function that will be called by the AI
+// AI Board scoring function
+// takes the vector of winningTiples and iterates through them, if a winning triple is detected returns
+// score of -1 or +1, else 0
+//
+int aiBoardEval(const std::string& state) 
+{
+    static const list<vector<int>> winningTriples = {
+        {0,1,2}, {3,4,5}, {6,7,8},
+        {0,3,6}, {1,4,7}, {2,5,8},
+        {0,4,8}, {2,4,6}
+    };    
+
+    for (const auto& triple : winningTriples) {
+        char player = state[triple[0]];
+        if (player != '0' &&
+            player == state[triple[1]] &&
+            player == state[triple[2]])
+        {
+            return (state[triple[0]] == '2') ? AI_PLAYER : HUMAN_PLAYER;
+        }
+    }
+    return 0;
+}
+
+//
+// AI terminal test state detecting function
+// checks if the board is evaluated to have a winner or if the board is full, else it is not terminal
+//
+bool aiTestForTerminal(const std::string& state) 
+{
+    if (aiBoardEval(state) != 0) return true;
+    if (state.find('0') == string::npos) return true;
+    return false;
+}
+// 
+// negamax recursive function
+// first checks if the current state is terminal, if it does it starts returns the score of the board
+// minus the depth to push the AI to take the earliest win. Terminality is also the base case
+// the main loop simulates a game tree/path utilizing negamax recursive calls, and filters out the best
+// score based on the return value when the score is passed back up after recursion
+//
+int TicTacToe::negamax(std::string& state, int depth, int playerColor) 
+{
+    if (aiTestForTerminal(state)) {
+        return (aiBoardEval(state) - depth);
+    }
+
+    int bestVal = -9999;
+
+    for (int i = 0; i < 9; i++) {
+        if (state[i] == '0') {
+            state[i] = (playerColor == HUMAN_PLAYER) ? '1' : '2';
+            int val = -negamax(state, depth - 1, -playerColor);
+            bestVal = std::max(bestVal, val);
+            state[i] = '0';
+        }
+    }
+    return bestVal;
+}
+//
+// update AI function
+// for every possible position where the AI can move next, place the AI there and perform root call
+// of negamax to simulate every possible state the rest of the game can take
+// filter out the best value position returned by negamax recursive calls for each position AI can take
+// and take that position
 //
 void TicTacToe::updateAI() 
 {
-    BitHolder* bestMove = nullptr;
     std::string state = stateString();
+    int bestVal = -9999;
+    ChessSquare* bestMove = nullptr;
 
-    // Traverse all cells, evaluate minimax function for all empty cells
     _grid->forEachSquare([&](ChessSquare* square, int x, int y) {
         int index = y * 3 + x;
-        // Check if cell is empty
+
         if (state[index] == '0') {
-            bestMove = square;
+            state[index] = '2';
+            int newVal = -negamax(state, 9, HUMAN_PLAYER);
+            state[index] = '0';
+
+            if (newVal > bestVal) {
+                bestVal = newVal;
+                bestMove = square;
+            }
         }
     });
 
-
-    // Make the best move
-    if(bestMove) {
-        if (actionForEmptyHolder(*bestMove)) {
-        }
+    if (bestMove) {
+        actionForEmptyHolder(*bestMove);
+        endTurn();
     }
 }
