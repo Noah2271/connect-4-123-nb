@@ -27,9 +27,8 @@ ConnectFour::~ConnectFour()
 Bit* ConnectFour::PieceForPlayer(const int playerNumber)
 {
     Bit *bit = new Bit();
-    bit->LoadTextureFromFile(redPiece ? "yellow.png" : "red.png");
-    bit->setOwner(getPlayerAt(redPiece ? 1 : 0));
-    redPiece = !redPiece;
+    bit->LoadTextureFromFile(playerNumber == AI_PLAYER ? "yellow.png" : "red.png");
+    bit->setOwner(getPlayerAt(playerNumber == AI_PLAYER ? 1 : 0));
     return bit;
 }
 
@@ -195,6 +194,7 @@ bool ConnectFour::checkForDraw()
 //
 // state string functions
 // 0 = empty | 1 = red | 2 = yellow
+// the AI player will always be yellow for my sanity
 //
 string ConnectFour::stateString()
 {
@@ -202,7 +202,7 @@ string ConnectFour::stateString()
     _grid->forEachSquare([&](ChessSquare* square, int x, int y) {
         Bit *bit = square->bit();
         if (bit) {
-            s[y * 7 + x] = std::to_string(bit->getOwner()->playerNumber()+1)[0];
+            s[y * 7 + x] = to_string(bit->getOwner()->playerNumber()+1)[0];
         }
     });
     return s;
@@ -234,30 +234,173 @@ void ConnectFour::stopGame(){
 }
 
 //
-// random AI function
+// negamax + alpha beta pruning functions
 //
 
+//
+// column full check function for state strings
+// for arg column, iterates down the the entire column and checks for empty spaces
+//
+bool ConnectFour::isColumnFullFromState(string& state, int col){ 
+    for(int row = 0; row < ROWS; row++){
+        int index = row * COLUMNS + col;
+        if(state[index] == '0')
+            return false;
+    }
+    return true;
+}
+
+//
+// getter for lowest empty row for a argument column
+// iterates from the bottom of the column because if iterating from the top,
+// you'll get the highest empty row
+//
+int ConnectFour::getLowestEmptyRowFromState(string& state, int col){
+    for(int row = ROWS -1; row >= 0; --row){
+        int index = row * COLUMNS + col;
+        if(state[index] == '0'){
+            return row;
+        }
+    }
+    return -1;
+}
+
+//
+// updateAI function
+// utilizes chrono to make the AI wait a turn before taking its move
+// iterates through each lowest empty row position and starts recursively calling negamax to simulate game
+// filters out the best score based on the game stemming from that move and takes it
+//
 void ConnectFour::updateAI(){
     static bool waiting = false;
-    static std::chrono::steady_clock::time_point waitTime;
-    if(checkForWinner() != nullptr || checkForDraw()) return;
+    static chrono::steady_clock::time_point waitTime;
 
     if(!waiting) {
         waiting = true;
-        waitTime = std::chrono::steady_clock::now() + std::chrono::seconds(1);
-        return;
-    }
-    if(std::chrono::steady_clock::now() < waitTime) return;
-        int randomCol = rand() % 7;
-        while((isColumnFull(randomCol))){
-            randomCol = rand() % 7;
-        }
-        int targetRow = getLowestEmptyRow(randomCol);
-        Bit *AIBit = PieceForPlayer(AI_PLAYER);
-        ChessSquare* topSquare = _grid->getSquare(randomCol, 0);
-        ChessSquare* targetSquare = _grid->getSquare(randomCol, targetRow);
-        makeTurn(topSquare, targetSquare, randomCol, targetRow, AIBit);
-        waiting = false;
+        waitTime = chrono::steady_clock::now() + chrono::seconds(1);
         return;
     }
 
+    if(chrono::steady_clock::now() < waitTime) return;
+
+    string currentState = stateString();
+    int bestVal = -9999;
+    int bestCol = -1;
+
+    for(int i = 0; i < COLUMNS; i++){
+        if (!isColumnFullFromState(currentState, i)){
+            int legalRow = getLowestEmptyRowFromState(currentState, i);
+            int index = legalRow * COLUMNS + i;
+            currentState[index] = '2';
+            int newVal = -negamax(currentState, 7, -10000, 10000, HUMAN_PLAYER);
+            currentState[index] = '0';
+
+            if (newVal > bestVal){
+                bestVal= newVal;
+                bestCol = i;
+            }
+        }
+    }
+
+    if(bestCol != -1){
+        int targetRow = getLowestEmptyRow(bestCol);
+        Bit *AIBit = PieceForPlayer(AI_PLAYER);
+        ChessSquare* topSquare = _grid->getSquare(bestCol, 0);
+        ChessSquare* targetSquare = _grid->getSquare(bestCol, targetRow);
+        makeTurn(topSquare, targetSquare, bestCol, targetRow, AIBit);
+    }
+    cout << bestVal << endl;
+    waiting = false;
+    return;
+
+}
+
+//
+// board scoring function
+// scores the current game state with a preference for playing the middle
+// scores by counting consecutive pieces horizontally, vertically, and diagonally
+// the more consecutive AI pieces (up to 4 for terminal), the better the score for AI.
+// if consecutive player pieces, accrues bad score
+//
+int ConnectFour::aiBoardEval(string& state){
+    int score = 0;
+    static const int centerSlots[] = {2,3,4};
+
+    for(int col : centerSlots){
+        int aiCount = 0;
+        int humanCount = 0;
+
+        for(int row = 0; row < ROWS; row++){
+            char v = state[row * COLUMNS + col];
+            if(v == '2') aiCount++;
+            else if(v == '1') humanCount++;
+        }
+
+        score += aiCount * 6;
+        score -= humanCount * 6;
+    }
+
+    for(int row = 0; row < ROWS; row++){
+        int base = row * COLUMNS;
+        for(int col = 0; col < COLUMNS; col++){
+            // calculateScore() is implemented in ConnectFour.h as a template function for efficiency
+            if(col <= COLUMNS - 4){
+                // passed in function checks for horizontal consecutives
+                score += calculateScore(row, col, state, [&](int consecutivePieces) {return state[base + (col + consecutivePieces)];
+                });
+            }
+             if(row <= ROWS - 4){
+                // passed in function checks for vertical consecutives
+                score += calculateScore(row, col, state, [&](int consecutivePieces) {return state[base + consecutivePieces * 7 + col];
+                });
+             }
+            if (row <= ROWS - 4 && col <= 4) {
+                // passed in function checks for diagonal consecutives 
+                score += calculateScore(row, col, state, [&](int consecutivePieces) {return state[(row + consecutivePieces) * COLUMNS + (col + consecutivePieces)];
+                });
+            }
+            if (row <= ROWS - 4 && col >= 3) {
+                // passed in function checks for diagonal consecutives 
+                score += calculateScore(row, col, state, [&](int consecutivePieces) {return state[(row + consecutivePieces) * COLUMNS + (col - consecutivePieces)];
+                });
+            }
+        }
+    }   
+    return score;
+}
+
+// 
+// check for terminal function
+// if gameboard full or aiBoardEval returns some sort of consecutive four, the game is terminal
+//
+bool ConnectFour::aiTestForTerminal(string& state){
+    return(state.find('0') == string::npos || aiBoardEval(state) >= 999999 ||  aiBoardEval(state) <= -999999);
+}
+
+//
+// negamax function
+// same process as updateAI() for move simulation but flips the playerColor with alpha beta pruning
+//
+int ConnectFour::negamax(string& state, int depth, int alpha, int beta, int playerColor){
+    if(aiTestForTerminal(state) || depth == 0) return aiBoardEval(state) * playerColor;
+
+    int bestVal = -9999;
+
+    for(int i = 0; i < COLUMNS; i++){
+        if(!isColumnFullFromState(state, i)){
+            int legalRow = getLowestEmptyRowFromState(state, i);
+            int index = legalRow * COLUMNS + i;
+            state[index] = (playerColor == HUMAN_PLAYER) ? '1' : '2';
+            int val = -negamax(state, depth -1, -beta, -alpha, -playerColor);
+            state[index] = '0';
+            bestVal = max(bestVal, val);
+            // alpha updated with the best score
+            alpha = max(alpha, val);
+            // prune if opposition cannot do better than current player
+            if(alpha >= beta){
+                break;
+            }
+        }
+    }
+    return bestVal;
+}

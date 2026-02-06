@@ -3,14 +3,17 @@ Noah Billedo CMPM 123 - Windows PC
 ## Connect Four Implementation
 #### ConnectFour.h
 - Holds the class for ConnectFour, which inherits/overrides most of the base game class functions with the addition of the following helper functions. Their names document themself.
-    int getLowestEmptyRow(int);
-    bool isColumnFull(int);
-    void makeTurn(ChessSquare* topSquare, ChessSquare* targetSquare, int col, int targetRow, Bit* bit);
+    int getLowestEmptyRow()
+    bool isColumnFull()
+    void makeTurn()
+    isColumnFullFromState()
+    getLowestEmptyRowFromState()
+    calculateScore() <-- template
 
 
 #### ConnectFour.cpp
-- Contains the implementation of the functions defined in ConnectFour.h. Currently includes implementation of a random AI that generates a random non-full column number before dropping a piece down using the makeTurn() function. Save state yet to be implemented.
+- Contains the implementation of the functions defined in ConnectFour.h. Connect four grid is represented by a grid of chessSquares with index [0][0] at the top left and [6][5] at the bottom right. Players are able to make moves in this implementation by clicking on any empty space is a non-full column; where the piece will start at the top square of the column and move to its resting place at the targeted square for the move. Wins are tracked by scanning the entire board and for each piece checking for four consecutive pieces in any horizontal, vertical, or diagonal direction.
+- Negamax AI with alpha-beta pruning and search depth of 7 is also implemented. The following helper functions were created alongside the function from TicTacToe for its implementation: isColumnFullFromState(), getLowestEmptyRowFromState(), and calculateScore(). The first two work similarly to isColumnFull() and getLowestEmptyRow(), but instead of utilizing the _grid it indices and checks the state string. calculateScore() is used in the evalFunction where for each piece within a buffer from the edge of the board, sequences of 4 pieces are scanned and scored based on the order of the pieces. This score returned from calculateScore() is returned to aiBoardEval() which returns the score to be returned to the negamax call.
 
 #### Application.cpp
-- Created a button to open the connect four game, as well as two additional buttons to choose whether the AI is playing as P1 or P2. P1 is implemented in by incrementing the turn number in _gameOptions by one, since it pushes up the AI to move first. ConnectFour.cpp also determines red or yellow pieces
-using a flip-flopping boolean value rather than player number so the red piece is always player one.
+- Created a button to open the connect four game. How the player first AI is implemented has changed since last commit to just calling updateAI() for the first time on game reset and game initialization, and setting the turn to the first turn beforehand. AI will also always be the yellow player no matter what turn they move on. No implementation for saving/loading with the state string yet.
