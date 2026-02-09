@@ -192,6 +192,17 @@ bool ConnectFour::checkForDraw()
 }
 
 //
+// stop game function
+// goes through the grid and destroys all the bits
+//
+void ConnectFour::stopGame(){
+    _grid->forEachSquare([&](ChessSquare* square, int x, int y) {
+        square->destroyBit();
+    });
+    return;
+}
+
+//
 // state string functions
 // 0 = empty | 1 = red | 2 = yellow
 // the AI player will always be yellow for my sanity
@@ -208,16 +219,26 @@ string ConnectFour::stateString()
     return s;
 }
 
+//
+// game load function for saves
+// not implemented
+//
 void ConnectFour::setStateString(string const&)
 {
     return;
 }
 
+//
+// empty state string
+//
 string ConnectFour::initialStateString()
 {
     return "000000000000000000000000000000000000000000";
 }
 
+//
+// bit move functions for chess/checkers. Not used here.
+//
 bool ConnectFour::canBitMoveFrom(Bit& bit, BitHolder& from){
     return false;
 }
@@ -226,17 +247,8 @@ bool ConnectFour::canBitMoveFromTo(Bit& bit, BitHolder& from, BitHolder& to){
     return false;
 }
 
-void ConnectFour::stopGame(){
-    _grid->forEachSquare([&](ChessSquare* square, int x, int y) {
-        square->destroyBit();
-    });
-    return;
-}
-
 //
 // negamax + alpha beta pruning functions
-//
-
 //
 // column full check function for state strings
 // for arg column, iterates down the the entire column and checks for empty spaces
@@ -292,7 +304,8 @@ void ConnectFour::updateAI(){
             int legalRow = getLowestEmptyRowFromState(currentState, i);
             int index = legalRow * COLUMNS + i;
             currentState[index] = '2';
-            int newVal = -negamax(currentState, 7, -10000, 10000, HUMAN_PLAYER);
+            // depth 6 for efficiency, anything higher will noticeably exceed the 1 second timer already in place
+            int newVal = -negamax(currentState, 6, -99999, 99999, HUMAN_PLAYER);
             currentState[index] = '0';
 
             if (newVal > bestVal){
@@ -301,7 +314,7 @@ void ConnectFour::updateAI(){
             }
         }
     }
-
+    
     if(bestCol != -1){
         int targetRow = getLowestEmptyRow(bestCol);
         Bit *AIBit = PieceForPlayer(AI_PLAYER);
@@ -309,10 +322,8 @@ void ConnectFour::updateAI(){
         ChessSquare* targetSquare = _grid->getSquare(bestCol, targetRow);
         makeTurn(topSquare, targetSquare, bestCol, targetRow, AIBit);
     }
-    cout << bestVal << endl;
     waiting = false;
     return;
-
 }
 
 //
@@ -379,12 +390,12 @@ bool ConnectFour::aiTestForTerminal(string& state){
 
 //
 // negamax function
-// same process as updateAI() for move simulation but flips the playerColor with alpha beta pruning
+// same process as updateAI() for move simulation but flips the playerColor and has alpha beta pruning to filter out irrelevant moves
 //
 int ConnectFour::negamax(string& state, int depth, int alpha, int beta, int playerColor){
     if(aiTestForTerminal(state) || depth == 0) return aiBoardEval(state) * playerColor;
 
-    int bestVal = -9999;
+    int bestVal = -9999999;
 
     for(int i = 0; i < COLUMNS; i++){
         if(!isColumnFullFromState(state, i)){
@@ -392,11 +403,11 @@ int ConnectFour::negamax(string& state, int depth, int alpha, int beta, int play
             int index = legalRow * COLUMNS + i;
             state[index] = (playerColor == HUMAN_PLAYER) ? '1' : '2';
             int val = -negamax(state, depth -1, -beta, -alpha, -playerColor);
-            state[index] = '0';
+            state[index] = '0';               
             bestVal = max(bestVal, val);
-            // alpha updated with the best score
+            // stores best seen score for current player of the negamax call
             alpha = max(alpha, val);
-            // prune if opposition cannot do better than current player
+            // if max score of minimizing player less than minimum score of maximizing player, prune
             if(alpha >= beta){
                 break;
             }

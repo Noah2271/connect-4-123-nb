@@ -79,14 +79,18 @@ namespace ClassGame {
                         game->_gameOptions.AIPlaying = true;
                         game->setUpBoard();
                     }
-                    //game->_gameOptions.AIPlaying = !game->_gameOptions.AIPlaying;
 
-
-
+                //
+                // game information display
+                // varies for different gamemodes
+                //
                 } else {
-                    // nitpicking about player number display
-                    ImGui::Text("Current Player Number: %d", game->getCurrentPlayer()->playerNumber() == 0 ? 2 : 1);
-                    if(!game->_gameOptions.P1AI) ImGui::Text("Current Player Number: %d", game->getCurrentPlayer()->playerNumber()+1);
+                    // player 1 AI display
+                    if(game->_gameOptions.P1AI && game->gameHasAI()) ImGui::Text("Current Player Number: %d", game->getCurrentPlayer()->playerNumber() == 0 ? 2 : 1);
+                    // player 2 AI display
+                    if(!game->_gameOptions.P1AI && game->gameHasAI()) ImGui::Text("Current Player Number: %d", game->getCurrentPlayer()->playerNumber()+1);
+                    // player vs player display
+                    if(!game->gameHasAI()) ImGui::Text("Current Player Number: %d", game->getCurrentPlayer()->playerNumber()+1);
                     ImGui::Text("Current Board State: %s", game->stateString().c_str());
                 }
                 ImGui::End();
@@ -119,8 +123,4 @@ namespace ClassGame {
                 gameWinner = -1;
             }
         }
-
-
-
-        // nega call is done infinitely because of the +1 for p1 AI [FIXED] --? Sharpen AI Next
 }

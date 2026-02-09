@@ -250,6 +250,5 @@ void TicTacToe::updateAI()
 
     if (bestMove) {
         actionForEmptyHolder(*bestMove);
-        endTurn();
     }
 }

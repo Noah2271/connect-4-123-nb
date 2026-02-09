@@ -28,13 +28,16 @@ public:
     void        makeTurn(ChessSquare* topSquare, ChessSquare* targetSquare, int col, int targetRow, Bit* bit);
     void        setUpBoard() override;
 
-    // calculateScore getter function 
+    //
+    // calculateScore getter function
+    // 
     template <typename Getter>
     int calculateScore(int row, int col, const std::string& state, Getter getPiece)
     {
         int aiPieces = 0, humanPieces = 0, empty = 0;
 
         for (int i = 0; i < 4; i++) {
+            // getPiece is the evaluation function that denotes what type of direction calculateScore is scanning for
             char p = getPiece(i);
             if (p == '2') aiPieces++;
             else if (p == '1') humanPieces++;
