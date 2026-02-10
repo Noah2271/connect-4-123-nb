@@ -284,16 +284,16 @@ int ConnectFour::getLowestEmptyRowFromState(string& state, int col){
 // filters out the best score based on the game stemming from that move and takes it
 //
 void ConnectFour::updateAI(){
-    static bool waiting = false;
-    static chrono::steady_clock::time_point waitTime;
+    static bool AIWaiting = false;
+    static chrono::steady_clock::time_point waitClock;
 
-    if(!waiting) {
-        waiting = true;
-        waitTime = chrono::steady_clock::now() + chrono::seconds(1);
+    if(!AIWaiting) {
+        AIWaiting = true;
+        waitClock = chrono::steady_clock::now() + chrono::seconds(1);
         return;
     }
 
-    if(chrono::steady_clock::now() < waitTime) return;
+    if(chrono::steady_clock::now() < waitClock) return;
 
     string currentState = stateString();
     int bestVal = -9999;
@@ -322,7 +322,7 @@ void ConnectFour::updateAI(){
         ChessSquare* targetSquare = _grid->getSquare(bestCol, targetRow);
         makeTurn(topSquare, targetSquare, bestCol, targetRow, AIBit);
     }
-    waiting = false;
+    AIWaiting = false;
     return;
 }
 
@@ -337,6 +337,7 @@ int ConnectFour::aiBoardEval(string& state){
     int score = 0;
     static const int centerSlots[] = {2,3,4};
 
+    // center encouragement
     for(int col : centerSlots){
         int aiCount = 0;
         int humanCount = 0;
@@ -366,12 +367,12 @@ int ConnectFour::aiBoardEval(string& state){
                 });
              }
             if (row <= ROWS - 4 && col <= 4) {
-                // passed in function checks for diagonal consecutives 
+                // passed in function checks for diagonal consecutives (left-to-right)
                 score += calculateScore(row, col, state, [&](int consecutivePieces) {return state[(row + consecutivePieces) * COLUMNS + (col + consecutivePieces)];
                 });
             }
             if (row <= ROWS - 4 && col >= 3) {
-                // passed in function checks for diagonal consecutives 
+                // passed in function checks for diagonal consecutives (right-to-left)
                 score += calculateScore(row, col, state, [&](int consecutivePieces) {return state[(row + consecutivePieces) * COLUMNS + (col - consecutivePieces)];
                 });
             }
