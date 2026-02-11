@@ -11,6 +11,9 @@ using namespace std;
 const int ROWS = 6;
 const int COLUMNS = 7;
 bool redPiece = false;
+bool gameOver = false;
+
+
 ConnectFour::ConnectFour()
 {
         _grid = new Grid(7,6);
@@ -21,9 +24,6 @@ ConnectFour::~ConnectFour()
     delete _grid;
 }
 
-//
-// probably going to have to make a new function for setStateString
-//
 Bit* ConnectFour::PieceForPlayer(const int playerNumber)
 {
     Bit *bit = new Bit();
@@ -142,32 +142,38 @@ Player* ConnectFour::getOwner(ChessSquare* square)
 //
 Player* ConnectFour::checkForWinner()
 {
-    for(int row = 0; row < ROWS; ++row){
-        for(int col = 0; col <= COLUMNS; ++col){
-            Player* owner = getOwner(_grid->getSquare(col,row));
-            if(owner != nullptr && 
-                owner == getOwner(_grid->getSquare(col+1, row)) &&
-                owner == getOwner(_grid->getSquare(col+2, row)) &&
-                owner == getOwner(_grid->getSquare(col+3, row))) {
-                    return owner;
-            }
-            if(owner != nullptr && 
-                owner == getOwner(_grid->getSquare(col, row+1)) &&
-                owner == getOwner(_grid->getSquare(col, row+2)) &&
-                owner == getOwner(_grid->getSquare(col, row+3))) {
-                    return owner;
-            }
-            if(owner != nullptr && 
-                owner == getOwner(_grid->getSquare(col+1, row+1)) &&
-                owner == getOwner(_grid->getSquare(col+2, row+2)) &&
-                owner == getOwner(_grid->getSquare(col+3, row+3))) {
-                    return owner;
-            }
-            if(owner != nullptr && 
-                owner == getOwner(_grid->getSquare(col+1, row-1)) &&
-                owner == getOwner(_grid->getSquare(col+2, row-2)) &&
-                owner == getOwner(_grid->getSquare(col+3, row-3))) {
-                    return owner;
+    if(!gameOver){
+        for(int row = 0; row < ROWS; ++row){
+            for(int col = 0; col < COLUMNS; ++col){
+                Player* owner = getOwner(_grid->getSquare(col,row));
+                if(owner != nullptr && 
+                    owner == getOwner(_grid->getSquare(col+1, row)) &&
+                    owner == getOwner(_grid->getSquare(col+2, row)) &&
+                    owner == getOwner(_grid->getSquare(col+3, row))) {
+                        gameOver = true;
+                        return owner;
+                }
+                if(owner != nullptr && 
+                    owner == getOwner(_grid->getSquare(col, row+1)) &&
+                    owner == getOwner(_grid->getSquare(col, row+2)) &&
+                    owner == getOwner(_grid->getSquare(col, row+3))) {
+                        gameOver = true;
+                        return owner;
+                }
+                if(owner != nullptr && 
+                    owner == getOwner(_grid->getSquare(col+1, row+1)) &&
+                    owner == getOwner(_grid->getSquare(col+2, row+2)) &&
+                    owner == getOwner(_grid->getSquare(col+3, row+3))) {
+                        gameOver = true;
+                        return owner;
+                }
+                if(owner != nullptr && 
+                    owner == getOwner(_grid->getSquare(col+1, row-1)) &&
+                    owner == getOwner(_grid->getSquare(col+2, row-2)) &&
+                    owner == getOwner(_grid->getSquare(col+3, row-3))) {
+                        gameOver = true;
+                        return owner;
+                }
             }
         }
     }
@@ -181,14 +187,17 @@ Player* ConnectFour::checkForWinner()
 //
 bool ConnectFour::checkForDraw() 
 {
-    bool isDraw = true;
-    if (checkForWinner() != nullptr) return false;
-    _grid->forEachSquare([&isDraw](ChessSquare* square, int x, int y) {
-        if (!square->bit()) {
-            isDraw = false;
-        }
-    });
-    return isDraw;
+    if(!checkForWinner()){
+        bool isDraw = true;
+            if (checkForWinner() != nullptr) return false;
+            _grid->forEachSquare([&isDraw](ChessSquare* square, int x, int y) {
+                if (!square->bit()) {
+                    isDraw = false;
+                }
+            });
+        return isDraw;
+    }
+    return false;
 }
 
 //
@@ -199,6 +208,7 @@ void ConnectFour::stopGame(){
     _grid->forEachSquare([&](ChessSquare* square, int x, int y) {
         square->destroyBit();
     });
+    gameOver = false;
     return;
 }
 
@@ -333,51 +343,42 @@ void ConnectFour::updateAI(){
 // the more consecutive AI pieces (up to 4 for terminal), the better the score for AI.
 // if consecutive player pieces, accrues bad score
 //
-int ConnectFour::aiBoardEval(string& state){
+int ConnectFour::aiBoardEval(string& state) {
     int score = 0;
-    static const int centerSlots[] = {2,3,4};
 
-    // center encouragement
-    for(int col : centerSlots){
-        int aiCount = 0;
-        int humanCount = 0;
+    for (int row = 0; row < ROWS; row++) {
+        for (int col = 0; col < COLUMNS; col++) {
+            // calculateScore() is implemented in ConnectFour.h as a template function for efficiency
+            if (col + 3 < COLUMNS) {
+                // passed in function checks for horizontal consecutives
+                int val = calculateScore(row, col, state, [&](int i) { return state[row * COLUMNS + (col + i)]; });
+                if (val == 999999 || val == -999999) return val;
+                score += val;
+            }
 
-        for(int row = 0; row < ROWS; row++){
-            char v = state[row * COLUMNS + col];
-            if(v == '2') aiCount++;
-            else if(v == '1') humanCount++;
+            if (row + 3 < ROWS) {
+                // passed in function checks for vertical consecutives
+                int val = calculateScore(row, col, state, [&](int i) { return state[(row + i) * COLUMNS + col]; });
+                if (val == 999999 || val == -999999) return val;
+                score += val;
+            }
+
+            if (row + 3 < ROWS && col + 3 < COLUMNS) {
+                // passed in function checks for diagonal consecutives (left-to-right) down
+                int val = calculateScore(row, col, state, [&](int i) { return state[(row + i) * COLUMNS + (col + i)]; });
+                if (val == 999999 || val == -999999) return val;
+                score += val;
+            }
+
+            if (row + 3 < ROWS && col - 3 >= 0) {
+                // passed in function checks for diagonal consecutives (right-to-left) down
+                int val = calculateScore(row, col, state, [&](int i) { return state[(row + i) * COLUMNS + (col - i)]; });
+                if (val == 999999 || val == -999999) return val;
+                score += val;
+            }
         }
-
-        score += aiCount * 6;
-        score -= humanCount * 6;
     }
 
-    for(int row = 0; row < ROWS; row++){
-        int base = row * COLUMNS;
-        for(int col = 0; col < COLUMNS; col++){
-            // calculateScore() is implemented in ConnectFour.h as a template function for efficiency
-            if(col <= COLUMNS - 4){
-                // passed in function checks for horizontal consecutives
-                score += calculateScore(row, col, state, [&](int consecutivePieces) {return state[base + (col + consecutivePieces)];
-                });
-            }
-             if(row <= ROWS - 4){
-                // passed in function checks for vertical consecutives
-                score += calculateScore(row, col, state, [&](int consecutivePieces) {return state[base + consecutivePieces * 7 + col];
-                });
-             }
-            if (row <= ROWS - 4 && col <= 4) {
-                // passed in function checks for diagonal consecutives (left-to-right)
-                score += calculateScore(row, col, state, [&](int consecutivePieces) {return state[(row + consecutivePieces) * COLUMNS + (col + consecutivePieces)];
-                });
-            }
-            if (row <= ROWS - 4 && col >= 3) {
-                // passed in function checks for diagonal consecutives (right-to-left)
-                score += calculateScore(row, col, state, [&](int consecutivePieces) {return state[(row + consecutivePieces) * COLUMNS + (col - consecutivePieces)];
-                });
-            }
-        }
-    }   
     return score;
 }
 
@@ -394,7 +395,7 @@ bool ConnectFour::aiTestForTerminal(string& state){
 // same process as updateAI() for move simulation but flips the playerColor and has alpha beta pruning to filter out irrelevant moves
 //
 int ConnectFour::negamax(string& state, int depth, int alpha, int beta, int playerColor){
-    if(aiTestForTerminal(state) || depth == 0) return aiBoardEval(state) * playerColor;
+    if (aiTestForTerminal(state) || depth == 0) return aiBoardEval(state) * playerColor;
 
     int bestVal = -9999999;
 
@@ -402,16 +403,14 @@ int ConnectFour::negamax(string& state, int depth, int alpha, int beta, int play
         if(!isColumnFullFromState(state, i)){
             int legalRow = getLowestEmptyRowFromState(state, i);
             int index = legalRow * COLUMNS + i;
-            state[index] = (playerColor == HUMAN_PLAYER) ? '1' : '2';
+            state[index] = (playerColor == AI_PLAYER) ? '2' : '1';
             int val = -negamax(state, depth -1, -beta, -alpha, -playerColor);
             state[index] = '0';               
             bestVal = max(bestVal, val);
             // stores best seen score for current player of the negamax call
             alpha = max(alpha, val);
             // if max score of minimizing player less than minimum score of maximizing player, prune
-            if(alpha >= beta){
-                break;
-            }
+            if (alpha >= beta) break;
         }
     }
     return bestVal;

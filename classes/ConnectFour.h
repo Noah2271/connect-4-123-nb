@@ -37,7 +37,6 @@ public:
         int aiPieces = 0, humanPieces = 0, empty = 0;
 
         for (int i = 0; i < 4; i++) {
-            // getPiece is the evaluation function that denotes what type of direction calculateScore is scanning for
             char p = getPiece(i);
             if (p == '2') aiPieces++;
             else if (p == '1') humanPieces++;
@@ -48,11 +47,12 @@ public:
         if (humanPieces == 4) return -999999;
 
         int score = 0;
-        if (aiPieces == 3 && empty == 1) score += 100;
+
+        if (aiPieces == 3 && empty == 1) score += 500;
         else if (aiPieces == 2 && empty == 2) score += 50;
 
-        if (humanPieces == 3 && empty == 1) score -= 75;
-        else if (humanPieces == 2 && empty == 2) score -= 25;
+        if (humanPieces == 3 && empty == 1) score += 175;
+        else if (humanPieces == 2 && empty == 2) score += 25;
 
         return score;
     }

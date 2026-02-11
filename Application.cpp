@@ -36,7 +36,7 @@ namespace ClassGame {
 
                 if (gameOver) {
                     ImGui::Text("Game Over!");
-                    ImGui::Text("Winner: %d", gameWinner);
+                    ImGui::Text("Winner: %s", gameWinner == 1 ? "Red" : (gameWinner == 2 ? "Yellow" : "None"));
                     if (ImGui::Button("Reset Game")) {
                         game->stopGame();
                         game->setUpBoard();
