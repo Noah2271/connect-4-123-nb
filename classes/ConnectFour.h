@@ -48,11 +48,11 @@ public:
 
         int score = 0;
 
-        if (aiPieces == 3 && empty == 1) score += 500;
-        else if (aiPieces == 2 && empty == 2) score += 50;
+        if (aiPieces == 3 && empty == 1) score += 400;
+        else if (aiPieces == 2 && empty == 2) score += 80;
 
-        if (humanPieces == 3 && empty == 1) score += 175;
-        else if (humanPieces == 2 && empty == 2) score += 25;
+        if (humanPieces == 3 && empty == 1) score += 350;
+        else if (humanPieces == 2 && empty == 2) score += 70;
 
         return score;
     }

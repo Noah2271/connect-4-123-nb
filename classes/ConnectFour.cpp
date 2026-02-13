@@ -306,7 +306,7 @@ void ConnectFour::updateAI(){
     if(chrono::steady_clock::now() < waitClock) return;
 
     string currentState = stateString();
-    int bestVal = -9999;
+    int bestVal = -9999999;
     int bestCol = -1;
 
     for(int i = 0; i < COLUMNS; i++){
@@ -314,11 +314,18 @@ void ConnectFour::updateAI(){
             int legalRow = getLowestEmptyRowFromState(currentState, i);
             int index = legalRow * COLUMNS + i;
             currentState[index] = '2';
+
+            // if win condition for current move detected take it instantly, no need to call negamax
+            if(aiBoardEval(currentState) >= 999999) {
+                bestCol = i;
+                currentState[index] = '0';
+                break;
+            }
             // depth 6 for efficiency, anything higher will noticeably exceed the 1 second timer already in place
             int newVal = -negamax(currentState, 6, -99999, 99999, HUMAN_PLAYER);
             currentState[index] = '0';
 
-            if (newVal > bestVal){
+            if (newVal >= bestVal){
                 bestVal= newVal;
                 bestCol = i;
             }
