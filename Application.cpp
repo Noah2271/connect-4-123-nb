@@ -110,17 +110,18 @@ namespace ClassGame {
         // end turn is called by the game code at the end of each turn
         // this is where we check for a winner
         //
-        void EndOfTurn() 
+        void EndOfTurn()
         {
-            Player *winner = game->checkForWinner();
-            if (winner)
+        Player *winner = game->checkForWinner();
+        if (winner)
             {
-                gameOver = true;
-                gameWinner = winner->playerNumber()+1;
-            }
+            gameOver = true;
+            gameWinner = winner->playerNumber()+1;
+        } else {
             if (game->checkForDraw()) {
                 gameOver = true;
                 gameWinner = -1;
             }
         }
+    }
 }
